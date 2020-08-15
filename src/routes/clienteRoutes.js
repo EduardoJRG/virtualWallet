@@ -105,32 +105,35 @@ router.put("/api/recargaclientes", (req, res) => {
 });
 
 // metodo PUT pagar
-router.put("/api/recargaclientes", (req, res) => {
-  const recarga = req.body;
+router.put("/api/pagos", (req, res) => {
+  const pago = req.body;
 
-  const numDoc = recarga.documento;
-  const numCelular = recarga.celular;
-  const monto = recarga.monto;
-  const isMonto = typeof monto;
+  const valor = pago.monto;
+  const token = pago.token;
+  const idSession = pago.idSession;
+  const email = pago.email;
+  const isMonto = typeof valor;
 
   if (
-    !numDoc ||
-    !numCelular ||
-    !monto ||
-    monto <= 0 ||
-    numDoc === "" ||
-    numCelular === "" ||
+    !email ||
+    !token ||
+    !idSession ||
+    !valor ||
+    valor <= 0 ||
+    email === "" ||
+    token === "" ||
+    idSession === "" ||
     !isMonto === "number"
   ) {
     let sms = "Bad request missing parameters";
-    if (monto <= 0) sms = "Monto invalido";
+    if (valor <= 0) sms = "Monto invalido";
     res.json({
       code: 401,
       message: sms,
     });
   } else {
     //GOT ALL PARAMETERS
-    Cliente.rechargeClient(recarga, (err, client) => {
+    Cliente.chargeClient(pago, (err, client) => {
       if (err) {
         res.json({
           code: err.code,
@@ -141,13 +144,13 @@ router.put("/api/recargaclientes", (req, res) => {
       if (client === null || client === undefined || client.length == 0) {
         res.json({
           code: 600,
-          message: "recarga fallida, cliente no valido",
+          message: "pago fallido, sesion no valida",
         });
       } else {
         //CLIENT FOUND
         res.json({
           code: 200,
-          message: "recarga realizada con exito",
+          message: "pago realizado con exito",
         });
       }
     });
