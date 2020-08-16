@@ -133,43 +133,45 @@ router.put("/api/pagos", async (req, res) => {
     });
   } else {
     //GOT ALL PARAMETERS
-
     const mClient = await Cliente.find({
       email: pago.email,
-      token: pago.token,
-      idSession: pago.idSession,
     }).then((cliente) => {
       return cliente;
     });
 
-    console.log(mClient);
-
-    if (mClient[0].saldo - valor >= 0) {
-      Cliente.chargeClient(pago, (err, client) => {
-        if (err) {
-          res.json({
-            code: err.code,
-            message: err.message,
-          });
-        }
-
-        if (client === null || client === undefined || client.length == 0) {
-          res.json({
-            code: 600,
-            message: "pago fallido, sesion no valida.",
-          });
-        } else {
-          res.json({
-            code: 200,
-            message: "pago realizado con exito.",
-          });
-        }
+    if (mClient === null || mClient === undefined || mClient.length == 0) {
+      res.json({
+        code: 600,
+        message: "no se encontro cliente.",
       });
     } else {
-      res.json({
-        code: 800,
-        message: "Cliente no cuenta con suficiente saldo.",
-      });
+      if (mClient[0].saldo - valor >= 0) {
+        Cliente.chargeClient(pago, (err, client) => {
+          if (err) {
+            res.json({
+              code: err.code,
+              message: err.message,
+            });
+          }
+
+          if (client === null || client === undefined || client.length == 0) {
+            res.json({
+              code: 600,
+              message: "pago fallido, sesion no valida.",
+            });
+          } else {
+            res.json({
+              code: 200,
+              message: "pago realizado con exito.",
+            });
+          }
+        });
+      } else {
+        res.json({
+          code: 800,
+          message: "Cliente no cuenta con suficiente saldo.",
+        });
+      }
     }
   }
 });
