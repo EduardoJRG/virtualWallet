@@ -4,12 +4,22 @@ const router = express.Router();
 const Cliente = require("../models/cliente");
 const nodemailer = require("nodemailer");
 
-const sendMail = (mail, token) => {
+const sendMail = (mail, message) => {
   return new Promise(async (resolve, reject) => {
+    let dataToSend = message.toString();
+    let glosa = "Este es tu token de validacion para el pago";
+    let preTitle = "Token";
+    let subject = "Codigo validacion de pago";
+    if (dataToSend.includes("exito")) {
+      glosa = "Tu pago ha sido aprobado";
+      preTitle = "Mensaje";
+      subject = "Pago exitoso";
+    }
+
     const output = `
-    <p>Este es tu token de validacion para el pago</p>
+    <p>${glosa}</p>
     <ul>  
-      <li>Token: ${token}</li>
+      <li>${preTitle}: ${dataToSend}</li>
     </ul>
   `;
 
@@ -31,8 +41,8 @@ const sendMail = (mail, token) => {
     let mailOptions = {
       from: "eduardoemailsender@gmail.com", // sender address
       to: mail, // list of receivers
-      subject: "Codigo validacion de pago", // Subject line
-      text: token + "", // plain text body
+      subject: subject, // Subject line
+      text: dataToSend, // plain text body
       html: output, // html body
     };
 
@@ -46,7 +56,6 @@ const sendMail = (mail, token) => {
       console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
 
       resolve();
-      // res.render("contact", { msg: "Email has been sent" });
     });
   });
 };
@@ -194,7 +203,7 @@ router.put("/api/pagos", async (req, res) => {
       });
     } else {
       if (mClient[0].saldo - valor >= 0) {
-        Cliente.chargeClient(pago, (err, client) => {
+        Cliente.chargeClient(pago, async (err, client) => {
           if (err) {
             res.json({
               code: err.code,
@@ -208,6 +217,15 @@ router.put("/api/pagos", async (req, res) => {
               message: "pago fallido, sesion no valida.",
             });
           } else {
+            await sendMail(email, "Tu pago fue realidado con exito!!.").catch(
+              (err) => {
+                console.log(err);
+                res.json({
+                  code: 1000,
+                  message: "Error enviando el email",
+                });
+              }
+            );
             res.json({
               code: 200,
               message: "pago realizado con exito.",
@@ -258,7 +276,7 @@ router.post("/api/loginclient", (req, res) => {
   }
 });
 
-//metodo POST login
+//metodo POST authpayment
 router.post("/api/authpayment", async (req, res) => {
   const cliente = req.body;
   const documento = cliente.documento;
