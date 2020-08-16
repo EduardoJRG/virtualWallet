@@ -2,6 +2,54 @@ const express = require("express");
 const router = express.Router();
 
 const Cliente = require("../models/cliente");
+const nodemailer = require("nodemailer");
+
+const sendMail = (mail, token) => {
+  return new Promise(async (resolve, reject) => {
+    const output = `
+    <p>Este es tu token de validacion para el pago</p>
+    <ul>  
+      <li>Token: ${token}</li>
+    </ul>
+  `;
+
+    // create reusable transporter object using the default SMTP transport
+    let transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: "eduardoemailsender@gmail.com", // generated ethereal user
+        pass: "Asdasd123123", // generated ethereal password
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+
+    // setup email data with unicode symbols
+    let mailOptions = {
+      from: "eduardoemailsender@gmail.com", // sender address
+      to: mail, // list of receivers
+      subject: "Codigo validacion de pago", // Subject line
+      text: token + "", // plain text body
+      html: output, // html body
+    };
+
+    // send mail with defined transport object
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log(error);
+        reject();
+      }
+      console.log("Message sent: %s", info.messageId);
+      console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+
+      resolve();
+      // res.render("contact", { msg: "Email has been sent" });
+    });
+  });
+};
 
 //metodo GET
 router.get("/api/getclientes", (req, res) => {
@@ -207,6 +255,59 @@ router.post("/api/loginclient", (req, res) => {
         res.json(dataLog);
       }
     });
+  }
+});
+
+//metodo POST login
+router.post("/api/authpayment", async (req, res) => {
+  const cliente = req.body;
+  const documento = cliente.documento;
+  const email = cliente.email;
+
+  if (!email || !documento || email === "" || documento === "") {
+    res.json({
+      code: 401,
+      message: "Bad request missing parameters.",
+    });
+  } else {
+    //GOT ALL PARAMETERS
+    const mClient = await Cliente.find({
+      email: cliente.email,
+      documento: cliente.documento,
+    }).then((cliente) => {
+      return cliente;
+    });
+
+    if (mClient === null || mClient === undefined || mClient.length == 0) {
+      res.json({
+        code: 600,
+        message: "login fallido, client no encontrado.",
+      });
+    } else {
+      //CLIENT FOUND
+
+      const token = Math.floor(
+        Math.pow(10, 5) +
+          Math.random() * (Math.pow(10, 6) - Math.pow(10, 5) - 1)
+      );
+
+      Cliente.updateToken(email, token, async (err, dataLog) => {
+        if (err) {
+          res.json({
+            code: err.code,
+            message: err.message,
+          });
+        }
+        await sendMail(email, token).catch((err) => {
+          console.log(err);
+          res.json({
+            code: 1000,
+            message: "Error enviando el email",
+          });
+        });
+        res.json(dataLog);
+      });
+    }
   }
 });
 

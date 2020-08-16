@@ -41,7 +41,6 @@ module.exports.getClientByEmail = (email, callback) => {
   Cliente.find({ email: email }, callback);
 };
 
-
 //recharge client by phone and document
 module.exports.rechargeClient = (recarga, callback) => {
   const query = { celular: recarga.celular, documento: recarga.documento };
@@ -72,12 +71,20 @@ module.exports.chargeClient = async (pago, callback) => {
 module.exports.loginClient = (client, callback) => {
   const query = { email: client.email, documento: client.documento };
   const idSession = uuidv4();
-  const token = Math.floor(
-    Math.pow(10, 5) + Math.random() * (Math.pow(10, 6) - Math.pow(10, 5) - 1)
-  );
   Cliente.findOneAndUpdate(
     query,
-    { $set: { idSession: idSession, token: token } },
+    { $set: { idSession: idSession, token: "" } },
+    { new: true },
+    callback
+  );
+};
+
+//update token
+module.exports.updateToken = (email, token, callback) => {
+  const query = { email: email };
+  Cliente.findOneAndUpdate(
+    query,
+    { $set: { token: token } },
     { new: true },
     callback
   );
