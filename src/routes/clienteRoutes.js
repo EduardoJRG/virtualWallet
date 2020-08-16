@@ -93,6 +93,40 @@ router.get("/api/getclientes/:_email", (req, res) => {
   });
 });
 
+router.post("/api/getsaldo", (req, res) => {
+  const cliente = req.body;
+  const documento = cliente.documento;
+  const celular = cliente.celular;
+
+  if (!celular || !documento || celular === "" || documento === "") {
+    res.json({
+      code: 401,
+      message: "Bad request missing parameters.",
+    });
+  } else {
+    Cliente.getSaldoByParameters(cliente, (err, client) => {
+      if (err) {
+        res.json({
+          code: err.code,
+          message: err.message,
+        });
+      }
+
+      if (client === undefined || client.length == 0) {
+        res.json({
+          code: 400,
+          message: "client not found.",
+        });
+      } else {
+        res.json({
+          code: 200,
+          saldo: client[0].saldo,
+        });
+      }
+    });
+  }
+});
+
 //metodo POST
 router.post("/api/registerclient", (req, res) => {
   const cliente = req.body;

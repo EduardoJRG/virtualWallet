@@ -41,6 +41,14 @@ module.exports.getClientByEmail = (email, callback) => {
   Cliente.find({ email: email }, callback);
 };
 
+//Get saldo
+module.exports.getSaldoByParameters = (client, callback) => {
+  Cliente.find(
+    { documento: client.documento, celular: client.celular },
+    callback
+  );
+};
+
 //recharge client by phone and document
 module.exports.rechargeClient = (recarga, callback) => {
   const query = { celular: recarga.celular, documento: recarga.documento };
