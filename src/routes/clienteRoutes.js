@@ -28,7 +28,7 @@ router.get("/api/getclientes/:_email", (req, res) => {
     if (client === undefined || client.length == 0) {
       res.json({
         code: 400,
-        message: "client not found",
+        message: "client not found.",
       });
     } else {
       res.json(client);
@@ -42,7 +42,7 @@ router.post("/api/registerclient", (req, res) => {
   Cliente.addCliente(cliente, (err, cliente) => {
     if (err) {
       let sms;
-      if (err.code === 11000) sms = "Correo duplicado, usuario ya existe";
+      if (err.code === 11000) sms = "Correo duplicado, usuario ya existe.";
       else sms = err.message;
 
       res.json({
@@ -72,8 +72,8 @@ router.put("/api/recargaclientes", (req, res) => {
     numCelular === "" ||
     !isMonto === "number"
   ) {
-    let sms = "Bad request missing parameters";
-    if (monto <= 0) sms = "Monto invalido";
+    let sms = "Bad request missing parameters.";
+    if (monto <= 0) sms = "Monto invalido.";
     res.json({
       code: 401,
       message: sms,
@@ -91,13 +91,13 @@ router.put("/api/recargaclientes", (req, res) => {
       if (client === null || client === undefined || client.length == 0) {
         res.json({
           code: 600,
-          message: "recarga fallida, cliente no valido",
+          message: "recarga fallida, cliente no valido.",
         });
       } else {
         //CLIENT FOUND
         res.json({
           code: 200,
-          message: "recarga realizada con exito",
+          message: "recarga realizada con exito.",
         });
       }
     });
@@ -105,7 +105,7 @@ router.put("/api/recargaclientes", (req, res) => {
 });
 
 // metodo PUT pagar
-router.put("/api/pagos", (req, res) => {
+router.put("/api/pagos", async (req, res) => {
   const pago = req.body;
 
   const valor = pago.monto;
@@ -125,15 +125,69 @@ router.put("/api/pagos", (req, res) => {
     idSession === "" ||
     !isMonto === "number"
   ) {
-    let sms = "Bad request missing parameters";
-    if (valor <= 0) sms = "Monto invalido";
+    let sms = "Bad request missing parameters.";
+    if (valor <= 0) sms = "Monto invalido.";
     res.json({
       code: 401,
       message: sms,
     });
   } else {
     //GOT ALL PARAMETERS
-    Cliente.chargeClient(pago, (err, client) => {
+
+    const mClient = await Cliente.find({
+      email: pago.email,
+      token: pago.token,
+      idSession: pago.idSession,
+    }).then((cliente) => {
+      return cliente;
+    });
+
+    console.log(mClient);
+
+    if (mClient[0].saldo - valor >= 0) {
+      Cliente.chargeClient(pago, (err, client) => {
+        if (err) {
+          res.json({
+            code: err.code,
+            message: err.message,
+          });
+        }
+
+        if (client === null || client === undefined || client.length == 0) {
+          res.json({
+            code: 600,
+            message: "pago fallido, sesion no valida.",
+          });
+        } else {
+          res.json({
+            code: 200,
+            message: "pago realizado con exito.",
+          });
+        }
+      });
+    } else {
+      res.json({
+        code: 800,
+        message: "Cliente no cuenta con suficiente saldo.",
+      });
+    }
+  }
+});
+
+//metodo POST login
+router.post("/api/loginclient", (req, res) => {
+  const cliente = req.body;
+  const documento = cliente.documento;
+  const email = cliente.email;
+
+  if (!email || !documento || email === "" || documento === "") {
+    res.json({
+      code: 401,
+      message: "Bad request missing parameters.",
+    });
+  } else {
+    //GOT ALL PARAMETERS
+    Cliente.loginClient(cliente, (err, dataLog) => {
       if (err) {
         res.json({
           code: err.code,
@@ -141,31 +195,17 @@ router.put("/api/pagos", (req, res) => {
         });
       }
 
-      if (client === null || client === undefined || client.length == 0) {
+      if (dataLog === null || dataLog === undefined || dataLog.length == 0) {
         res.json({
           code: 600,
-          message: "pago fallido, sesion no valida",
+          message: "login fallido, client no encontrado.",
         });
       } else {
         //CLIENT FOUND
-        res.json({
-          code: 200,
-          message: "pago realizado con exito",
-        });
+        res.json(dataLog);
       }
     });
   }
 });
-
-//metodo DELETE
-// router.delete("/api/centroDeCostos/:_id", (req, res) => {
-//   const id = req.params._id;
-//   CentroDeCosto.deleteCentroDeCosto(id, (err, centroDeCosto) => {
-//     if (err) {
-//       throw err;
-//     }
-//     res.json(centroDeCosto);
-//   });
-// });
 
 module.exports = router;

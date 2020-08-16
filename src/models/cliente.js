@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { v4: uuidv4 } = require("uuid");
 
 //Cliente Schema
 const clienteSchema = mongoose.Schema({
@@ -40,6 +41,7 @@ module.exports.getClientByEmail = (email, callback) => {
   Cliente.find({ email: email }, callback);
 };
 
+
 //recharge client by phone and document
 module.exports.rechargeClient = (recarga, callback) => {
   const query = { celular: recarga.celular, documento: recarga.documento };
@@ -52,7 +54,7 @@ module.exports.rechargeClient = (recarga, callback) => {
 };
 
 //charge client
-module.exports.chargeClient = (pago, callback) => {
+module.exports.chargeClient = async (pago, callback) => {
   const query = {
     email: pago.email,
     token: pago.token,
@@ -61,6 +63,21 @@ module.exports.chargeClient = (pago, callback) => {
   Cliente.findOneAndUpdate(
     query,
     { $inc: { saldo: -pago.monto } },
+    { new: true },
+    callback
+  );
+};
+
+//login client
+module.exports.loginClient = (client, callback) => {
+  const query = { email: client.email, documento: client.documento };
+  const idSession = uuidv4();
+  const token = Math.floor(
+    Math.pow(10, 5) + Math.random() * (Math.pow(10, 6) - Math.pow(10, 5) - 1)
+  );
+  Cliente.findOneAndUpdate(
+    query,
+    { $set: { idSession: idSession, token: token } },
     { new: true },
     callback
   );
